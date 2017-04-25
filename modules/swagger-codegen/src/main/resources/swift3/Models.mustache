@@ -36,15 +36,15 @@ open class Response<T> {
 }
 
 private var once = Int()
-class Decoders {
+open class Decoders {
     static fileprivate var decoders = Dictionary<String, ((AnyObject, AnyObject?) -> AnyObject)>()
 
-    static func addDecoder<T>(clazz: T.Type, decoder: @escaping ((AnyObject, AnyObject?) -> T)) {
+    open static func addDecoder<T>(clazz: T.Type, decoder: @escaping ((AnyObject, AnyObject?) -> T)) {
         let key = "\(T.self)"
         decoders[key] = { decoder($0, $1) as AnyObject }
     }
 
-    static func decode<T>(clazz: T.Type, discriminator: String, source: AnyObject) -> T {
+    open static func decode<T>(clazz: T.Type, discriminator: String, source: AnyObject) -> T {
         let key = discriminator;
         if let decoder = decoders[key] {
             return decoder(source, nil) as! T
@@ -53,12 +53,12 @@ class Decoders {
         }
     }
 
-    static func decode<T>(clazz: [T].Type, source: AnyObject) -> [T] {
+    open static func decode<T>(clazz: [T].Type, source: AnyObject) -> [T] {
         let array = source as! [AnyObject]
         return array.map { Decoders.decode(clazz: T.self, source: $0, instance: nil) }
     }
 
-    static func decode<T, Key: Hashable>(clazz: [Key:T].Type, source: AnyObject) -> [Key:T] {
+    open static func decode<T, Key: Hashable>(clazz: [Key:T].Type, source: AnyObject) -> [Key:T] {
         let sourceDictionary = source as! [Key: AnyObject]
         var dictionary = [Key:T]()
         for (key, value) in sourceDictionary {
@@ -67,7 +67,7 @@ class Decoders {
         return dictionary
     }
 
-    static func decode<T>(clazz: T.Type, source: AnyObject, instance: AnyObject?) -> T {
+    open static func decode<T>(clazz: T.Type, source: AnyObject, instance: AnyObject?) -> T {
         initialize()
         if T.self is Int32.Type && source is NSNumber {
             return source.int32Value as! T;
@@ -93,7 +93,7 @@ class Decoders {
         }
     }
 
-    static func decodeOptional<T>(clazz: T.Type, source: AnyObject?) -> T? {
+    open static func decodeOptional<T>(clazz: T.Type, source: AnyObject?) -> T? {
         if source is NSNull {
             return nil
         }
@@ -102,7 +102,7 @@ class Decoders {
         }
     }
 
-    static func decodeOptional<T>(clazz: [T].Type, source: AnyObject?) -> [T]? {
+    open static func decodeOptional<T>(clazz: [T].Type, source: AnyObject?) -> [T]? {
         if source is NSNull {
             return nil
         }
@@ -111,7 +111,7 @@ class Decoders {
         }
     }
 
-    static func decodeOptional<T, Key: Hashable>(clazz: [Key:T].Type, source: AnyObject?) -> [Key:T]? {
+    open static func decodeOptional<T, Key: Hashable>(clazz: [Key:T].Type, source: AnyObject?) -> [Key:T]? {
         if source is NSNull {
             return nil
         }
@@ -146,7 +146,8 @@ class Decoders {
                 // treat as a java date
                 return Date(timeIntervalSince1970: Double(sourceInt / 1000) )
             }
-            fatalError("formatter failed to parse \(source)")
+            print("formatter failed to parse \(source)")
+            return Date()
         } {{#models}}{{#model}}
 
         // Decoder for [{{{classname}}}]
@@ -170,7 +171,7 @@ class Decoders {
 {{/isEnum}}
 {{^isEnum}}
 {{#allVars.isEmpty}}
-            if let source = source as? {{dataType}} {
+            if let source = source as? {{classname}} {
                 return source
             }
             fatalError("Source \(source) is not convertible to typealias {{classname}}: Maybe swagger file is insufficient")

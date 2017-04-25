@@ -20,12 +20,19 @@ open class AlamofireRequestBuilder<T>: RequestBuilder<T> {
         super.init(method: method, URLString: URLString, parameters: parameters, isBody: isBody, headers: headers)
     }
 
+    private var offlineRequest = false
+
     /**
      May be overridden by a subclass if you want to control the session
      configuration.
      */
-    open func createSessionManager() -> Alamofire.SessionManager {
+    open func createSessionManager(offlineRequest isOfflineRequest: Bool = false) -> Alamofire.SessionManager {
         let configuration = URLSessionConfiguration.default
+        // take response from cache however old it may be
+        if isOfflineRequest == true {
+          configuration.requestCachePolicy = NSURLRequest.CachePolicy.returnCacheDataDontLoad
+          self.offlineRequest = true
+        }
         configuration.httpAdditionalHeaders = buildHeaders()
         return Alamofire.SessionManager(configuration: configuration)
     }
@@ -49,10 +56,10 @@ open class AlamofireRequestBuilder<T>: RequestBuilder<T> {
         return manager.request(URLString, method: method, parameters: parameters, encoding: encoding, headers: headers)
     }
 
-    override open func execute(_ completion: @escaping (_ response: Response<T>?, _ error: Error?) -> Void) {
+    override open func execute(offlineRequest isOfflineRequest: Bool = false, _ completion: @escaping (_ response: Response<T>?, _ error: Error?) -> Void) {
         let managerId:String = UUID().uuidString
         // Create a new manager for each request to customize its request header
-        let manager = createSessionManager()
+        let manager = createSessionManager(offlineRequest: isOfflineRequest)
         managerStore[managerId] = manager
 
         let encoding:ParameterEncoding = isBody ? JSONEncoding() : URLEncoding()
@@ -121,6 +128,8 @@ open class AlamofireRequestBuilder<T>: RequestBuilder<T> {
             validatedRequest.responseString(completionHandler: { (stringResponse) in
                 cleanupRequest()
 
+                if self.processResponse(response: stringResponse, offlineRequest: self.offlineRequest, completion: completion) { return }
+
                 if stringResponse.result.isFailure {
                     completion(
                         nil,
@@ -141,6 +150,8 @@ open class AlamofireRequestBuilder<T>: RequestBuilder<T> {
             validatedRequest.responseData(completionHandler: { (voidResponse) in
                 cleanupRequest()
 
+                if self.processResponse(response: voidResponse, offlineRequest: self.offlineRequest, completion: completion) { return }
+
                 if voidResponse.result.isFailure {
                     completion(
                         nil,
@@ -159,6 +170,8 @@ open class AlamofireRequestBuilder<T>: RequestBuilder<T> {
         case is Data.Type:
             validatedRequest.responseData(completionHandler: { (dataResponse) in
                 cleanupRequest()
+
+                if self.processResponse(response: dataResponse, offlineRequest: self.offlineRequest, completion: completion) { return }
 
                 if (dataResponse.result.isFailure) {
                     completion(
@@ -179,6 +192,8 @@ open class AlamofireRequestBuilder<T>: RequestBuilder<T> {
         default:
             validatedRequest.responseJSON(options: .allowFragments) { response in
                 cleanupRequest()
+
+                if self.processResponse(response: response, offlineRequest: self.offlineRequest, completion: completion) { return }
 
                 if response.result.isFailure {
                     completion(nil, ErrorResponse.Error(response.response?.statusCode ?? 500, response.data, response.result.error!))

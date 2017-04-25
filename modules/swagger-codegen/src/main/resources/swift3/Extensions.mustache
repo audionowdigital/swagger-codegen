@@ -67,8 +67,9 @@ extension Data: JSONEncodable {
 
 private let dateFormatter: DateFormatter = {
     let fmt = DateFormatter()
-    fmt.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
+    fmt.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
     fmt.locale = Locale(identifier: "en_US_POSIX")
+    fmt.timeZone = TimeZone(abbreviation: "UTC")
     return fmt
 }()
 
