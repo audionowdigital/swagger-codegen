@@ -23,7 +23,7 @@ public enum {{classname}}: {{dataType}} {
 {{/isEnum}}
 {{^isEnum}}
 {{#vars.isEmpty}}
-public class {{classname}} : {{#parent}}{{{parent}}}{{/parent}} {
+open class {{classname}} : {{#parent}}{{{parent}}}{{/parent}} {
 
 }
 {{/vars.isEmpty}}
