@@ -170,13 +170,17 @@ open class Decoders {
             fatalError("Source \(source) is not convertible to enum type {{classname}}: Maybe swagger file is insufficient")
 {{/isEnum}}
 {{^isEnum}}
-{{#allVars.isEmpty}}
+<!-- {{#allVars.isEmpty}}
+            let result = instance == nil ? {{classname}}() : instance as! {{classname}}
+
+            return result
+            ??
             if let source = source as? {{classname}} {
                 return source
             }
             fatalError("Source \(source) is not convertible to typealias {{classname}}: Maybe swagger file is insufficient")
-{{/allVars.isEmpty}}
-{{^allVars.isEmpty}}
+{{/allVars.isEmpty}} -->
+<!-- {{^allVars.isEmpty}} -->
             let sourceDictionary = source as! [AnyHashable: Any]
             {{#discriminator}}
             // Check discriminator to support inheritance
@@ -210,7 +214,7 @@ open class Decoders {
             {{^isEnum}}result.{{name}} = Decoders.decodeOptional(clazz: {{{baseType}}}.self, source: sourceDictionary["{{baseName}}"] as AnyObject?){{/isEnum}}{{/allVars}}
             {{/unwrapRequired}}
             return result
-{{/allVars.isEmpty}}
+<!-- {{/allVars.isEmpty}} -->
 {{/isEnum}}
 {{/isArrayModel}}
         }{{/model}}
