@@ -10,6 +10,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import io.swagger.models.properties.*;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -29,15 +30,6 @@ import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import io.swagger.models.parameters.FormParameter;
 import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.BooleanProperty;
-import io.swagger.models.properties.DoubleProperty;
-import io.swagger.models.properties.FloatProperty;
-import io.swagger.models.properties.IntegerProperty;
-import io.swagger.models.properties.LongProperty;
-import io.swagger.models.properties.MapProperty;
-import io.swagger.models.properties.Property;
-import io.swagger.models.properties.StringProperty;
 
 
 public abstract class AbstractJavaCodegen extends DefaultCodegen implements CodegenConfig {
@@ -76,6 +68,7 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
     protected String apiDocPath = "docs/";
     protected String modelDocPath = "docs/";
     protected boolean supportJava6= false;
+    protected boolean alreadyExecuted = true;
 
     public AbstractJavaCodegen() {
         super();
@@ -744,10 +737,24 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
         if(codegenModel.description != null) {
             codegenModel.imports.add("ApiModel");
         }
-        if (codegenModel.discriminator != null && additionalProperties.containsKey("jackson")) {
+//        if (codegenModel.discriminator != null && additionalProperties.containsKey("jackson")) {
+        if (additionalProperties.containsKey("jackson")) {
             codegenModel.imports.add("JsonSubTypes");
             codegenModel.imports.add("JsonTypeInfo");
         }
+
+//       if backReference set on true, find the properties Object/List of Objects type and add them to the specific object->to assign them JsonBackReference
+
+        if (additionalProperties.containsKey("backReference")) {
+            codegenModel.imports.add("JsonValue");
+            codegenModel.imports.add("JsonProperty");
+            if (alreadyExecuted) {
+                if (allDefinitions != null)
+                    setBackRefProperties(allDefinitions);
+                alreadyExecuted = false;
+            }
+        }
+
         if (allDefinitions != null && codegenModel.parentSchema != null && codegenModel.hasEnums) {
             final Model parentModel = allDefinitions.get(codegenModel.parentSchema);
             final CodegenModel parentCodegenModel = super.fromModel(codegenModel.parent, parentModel);
@@ -1145,6 +1152,53 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
     @Override
     public String sanitizeTag(String tag) {
         return camelize(sanitizeName(tag));
+    }
+
+    public void setBackRefProperties(Map<String, Model> allDefinitions) {
+        for (Map.Entry<String, Model> modelEntry : allDefinitions.entrySet()) {
+            final String modelKey = modelEntry.getKey();
+            final Map<String, Property> properties = modelEntry.getValue().getProperties();
+            if (properties != null) {
+                for (Map.Entry<String, Property> entry : properties.entrySet()) {
+                    final Property value = entry.getValue();
+                    String modelNameRef = null;
+//                    boolean isException = checkExceptionModel(entry.getKey());
+//                    if (!isException) {
+                    if (value.getType().equals("ref")) {
+                        modelNameRef = ((RefProperty) value).getSimpleRef();
+                        value.setName(modelKey);
+                    }
+                    if (value instanceof ArrayProperty) {
+                        if (((ArrayProperty) value).getItems().getType().equals("ref")) {
+                            modelNameRef = ((RefProperty) ((ArrayProperty) value).getItems()).getSimpleRef();
+                            value.setName(modelKey);
+                        }
+                    }
+
+                    if (modelNameRef != null) {
+                        for (Map.Entry<String, Model> modelEntry1 : allDefinitions.entrySet()) {
+                            final String key = modelEntry1.getKey();
+                            if (key.equals(modelNameRef)) {
+                                RefProperty r = new RefProperty();
+                                r.set$ref("#/definitions/" + modelEntry.getKey());
+                                r.setType("parent");
+//                                     JsonBackReference value: child +  parent name
+                                r.setName(key.substring(0, 1).toLowerCase() + key.substring(1) + modelKey);
+                                if (modelEntry1.getValue().getProperties() != null) {
+                                    modelEntry1.getValue().getProperties().put(modelEntry.getKey(), r);
+                                } else {
+                                    HashMap<String, Property> options = new HashMap<String, Property>();
+                                    options.put(modelEntry.getKey(), r);
+                                    modelEntry1.getValue().setProperties(options);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+//            }
+        }
     }
 
 }

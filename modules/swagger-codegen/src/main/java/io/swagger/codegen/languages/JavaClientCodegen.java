@@ -27,6 +27,8 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     public static final String DO_NOT_USE_RX = "doNotUseRx";
     public static final String USE_PLAY24_WS = "usePlay24WS";
     public static final String PARCELABLE_MODEL = "parcelableModel";
+    public static final String JACKSON = "jackson";
+    public static final String BIDIRECTIONAL_RELATIONSHIPS = "backReference";
 
     public static final String RETROFIT_1 = "retrofit";
     public static final String RETROFIT_2 = "retrofit2";
@@ -40,6 +42,8 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     protected boolean useBeanValidation = false;
     protected boolean performBeanValidation = false;
     protected boolean useGzipFeature = false;
+    protected boolean jackson = false;
+    protected boolean backReference = false;
 
     public JavaClientCodegen() {
         super();
@@ -58,6 +62,8 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         cliOptions.add(CliOption.newBoolean(USE_BEANVALIDATION, "Use BeanValidation API annotations"));
         cliOptions.add(CliOption.newBoolean(PERFORM_BEANVALIDATION, "Perform BeanValidation"));
         cliOptions.add(CliOption.newBoolean(USE_GZIP_FEATURE, "Send gzip-encoded requests"));
+        cliOptions.add(CliOption.newBoolean(JACKSON, "Polymorphism in jackson annotations: @JsonTypeInfo usage"));
+        cliOptions.add(CliOption.newBoolean(BIDIRECTIONAL_RELATIONSHIPS, "Bidirectional relationships @JsonBackReference & @JsonManagedReference"));
 
         supportedLibraries.put("jersey1", "HTTP client: Jersey client 1.19.1. JSON processing: Jackson 2.7.0. Enable Java6 support using '-DsupportJava6=true'. Enable gzip request encoding using '-DuseGzipFeature=true'.");
         supportedLibraries.put("feign", "HTTP client: OpenFeign 9.4.0. JSON processing: Jackson 2.8.7");
@@ -127,6 +133,18 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         if (additionalProperties.containsKey(USE_GZIP_FEATURE)) {
             this.setUseGzipFeature(convertPropertyToBooleanAndWriteBack(USE_GZIP_FEATURE));
         }
+
+        if (additionalProperties.containsKey(JACKSON)) {
+            this.setJacksonProperty(Boolean.valueOf(additionalProperties.get(JACKSON).toString()));
+        }
+        additionalProperties.put(JACKSON, jackson);
+
+        if (additionalProperties.containsKey(BIDIRECTIONAL_RELATIONSHIPS)) {
+            this.setBackReference(Boolean.valueOf(additionalProperties.get(BIDIRECTIONAL_RELATIONSHIPS).toString()));
+        }
+        additionalProperties.put(BIDIRECTIONAL_RELATIONSHIPS, backReference);
+
+
 
         final String invokerFolder = (sourceFolder + '/' + invokerPackage).replace(".", "/");
         final String authFolder = (sourceFolder + '/' + invokerPackage + ".auth").replace(".", "/");
@@ -411,6 +429,14 @@ public class JavaClientCodegen extends AbstractJavaCodegen
 
     public void setUseGzipFeature(boolean useGzipFeature) {
         this.useGzipFeature = useGzipFeature;
+    }
+
+    public void setJacksonProperty(boolean jackson) {
+        this.jackson = jackson;
+    }
+
+    public void setBackReference(boolean backReference) {
+        this.backReference = backReference;
     }
 
     final private static Pattern JSON_MIME_PATTERN = Pattern.compile("(?i)application\\/json(;.*)?");

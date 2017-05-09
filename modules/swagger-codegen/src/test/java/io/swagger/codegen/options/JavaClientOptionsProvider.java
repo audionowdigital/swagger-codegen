@@ -24,6 +24,8 @@ public class JavaClientOptionsProvider extends JavaOptionsProvider {
         options.put(JavaClientCodegen.USE_BEANVALIDATION, "false");
         options.put(JavaClientCodegen.PERFORM_BEANVALIDATION, PERFORM_BEANVALIDATION);
         options.put(JavaClientCodegen.USE_GZIP_FEATURE, "false");
+        options.put(JavaClientCodegen.JACKSON, "false");
+        options.put(JavaClientCodegen.BIDIRECTIONAL_RELATIONSHIPS, "false");
 
         return options;
     }
