@@ -1309,6 +1309,9 @@ public class DefaultCodegen {
             m.discriminator = ((ModelImpl) model).getDiscriminator();
         }
 
+        if (m.discriminator != null)
+            m.hasDiscriminator = true;
+
         if (model instanceof ArrayModel) {
             ArrayModel am = (ArrayModel) model;
             ArrayProperty arrayProperty = new ArrayProperty(am.getItems());
