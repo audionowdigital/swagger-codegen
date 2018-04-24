@@ -19,6 +19,7 @@ public class CodegenOperation {
             isRestful;
     public String path, operationId, returnType, httpMethod, returnBaseType,
             returnContainer, summary, unescapedNotes, notes, baseName, defaultResponse, discriminator;
+    public boolean useCompletable;
     public List<Map<String, String>> consumes, produces, prioritizedContentTypes;
     public CodegenParameter bodyParam;
     public List<CodegenParameter> allParams = new ArrayList<CodegenParameter>();

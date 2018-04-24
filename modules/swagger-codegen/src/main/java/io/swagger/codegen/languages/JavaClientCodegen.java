@@ -12,11 +12,11 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class JavaClientCodegen extends AbstractJavaCodegen
         implements BeanValidationFeatures, PerformBeanValidationFeatures,
-                   GzipFeatures
-{
+        GzipFeatures {
     static final String MEDIA_TYPE = "mediaType";
 
     @SuppressWarnings("hiding")
@@ -145,7 +145,6 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         additionalProperties.put(BIDIRECTIONAL_RELATIONSHIPS, backReference);
 
 
-
         final String invokerFolder = (sourceFolder + '/' + invokerPackage).replace(".", "/");
         final String authFolder = (sourceFolder + '/' + invokerPackage + ".auth").replace(".", "/");
 
@@ -164,12 +163,12 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         supportingFiles.add(new SupportingFile("auth/ApiKeyAuth.mustache", authFolder, "ApiKeyAuth.java"));
         supportingFiles.add(new SupportingFile("auth/OAuth.mustache", authFolder, "OAuth.java"));
         supportingFiles.add(new SupportingFile("auth/OAuthFlow.mustache", authFolder, "OAuthFlow.java"));
-        supportingFiles.add(new SupportingFile( "gradlew.mustache", "", "gradlew") );
-        supportingFiles.add(new SupportingFile( "gradlew.bat.mustache", "", "gradlew.bat") );
-        supportingFiles.add(new SupportingFile( "gradle-wrapper.properties.mustache",
-                gradleWrapperPackage.replace( ".", File.separator ), "gradle-wrapper.properties") );
-        supportingFiles.add(new SupportingFile( "gradle-wrapper.jar",
-                gradleWrapperPackage.replace( ".", File.separator ), "gradle-wrapper.jar") );
+        supportingFiles.add(new SupportingFile("gradlew.mustache", "", "gradlew"));
+        supportingFiles.add(new SupportingFile("gradlew.bat.mustache", "", "gradlew.bat"));
+        supportingFiles.add(new SupportingFile("gradle-wrapper.properties.mustache",
+                gradleWrapperPackage.replace(".", File.separator), "gradle-wrapper.properties"));
+        supportingFiles.add(new SupportingFile("gradle-wrapper.jar",
+                gradleWrapperPackage.replace(".", File.separator), "gradle-wrapper.jar"));
         supportingFiles.add(new SupportingFile("git_push.sh.mustache", "", "git_push.sh"));
         supportingFiles.add(new SupportingFile("gitignore.mustache", "", ".gitignore"));
 
@@ -179,7 +178,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         }
 
         //TODO: add doc to retrofit1 and feign
-        if ( "feign".equals(getLibrary()) || "retrofit".equals(getLibrary()) ){
+        if ("feign".equals(getLibrary()) || "retrofit".equals(getLibrary())) {
             modelDocTemplateFiles.remove("model_doc.mustache");
             apiDocTemplateFiles.remove("api_doc.mustache");
         }
@@ -208,10 +207,10 @@ public class JavaClientCodegen extends AbstractJavaCodegen
             supportingFiles.add(new SupportingFile("auth/OAuthOkHttpClient.mustache", authFolder, "OAuthOkHttpClient.java"));
             supportingFiles.add(new SupportingFile("CollectionFormats.mustache", invokerFolder, "CollectionFormats.java"));
             additionalProperties.put("gson", "true");
-        } else if("jersey2".equals(getLibrary())) {
+        } else if ("jersey2".equals(getLibrary())) {
             supportingFiles.add(new SupportingFile("JSON.mustache", invokerFolder, "JSON.java"));
             additionalProperties.put("jackson", "true");
-        } else if("jersey1".equals(getLibrary())) {
+        } else if ("jersey1".equals(getLibrary())) {
             additionalProperties.put("jackson", "true");
         } else {
             LOGGER.error("Unknown library option (-l/--library): " + getLibrary());
@@ -244,7 +243,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
             additionalProperties.remove("gson");
         }
 
-        if (additionalProperties.containsKey("jackson") ) {
+        if (additionalProperties.containsKey("jackson")) {
             supportingFiles.add(new SupportingFile("RFC3339DateFormat.mustache", invokerFolder, "RFC3339DateFormat.java"));
         }
     }
@@ -265,18 +264,20 @@ public class JavaClientCodegen extends AbstractJavaCodegen
             if (operations != null) {
                 List<CodegenOperation> ops = (List<CodegenOperation>) operations.get("operation");
                 for (CodegenOperation operation : ops) {
+                    operation.useCompletable = operation.returnType != null;
                     if (operation.hasConsumes == Boolean.TRUE) {
+                        if(operation.returnType == null){
+                            operation.returnType = "Void";
+                        }
 
                         if (isMultipartType(operation.consumes)) {
                             operation.isMultipart = Boolean.TRUE;
-                        }
-                        else {
+                        } else {
                             operation.prioritizedContentTypes = prioritizeContentTypes(operation.consumes);
                         }
                     }
-                    if (operation.returnType == null) {
-                        operation.returnType = "Void";
-                    }
+
+
                     if (usesRetrofit2Library() && StringUtils.isNotEmpty(operation.path) && operation.path.startsWith("/"))
                         operation.path = operation.path.substring(1);
                 }
@@ -296,7 +297,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
                 for (int i = 0; i < items.length; ++i) {
                     if (items[i].matches("^\\{(.*)\\}$")) { // wrap in {}
                         // camelize path variable
-                        items[i] = "{" + camelize(items[i].substring(1, items[i].length()-1), true) + "}";
+                        items[i] = "{" + camelize(items[i].substring(1, items[i].length() - 1), true) + "}";
                     }
                 }
                 op.path = StringUtils.join(items, "/");
@@ -307,43 +308,41 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     }
 
     /**
-     *  Prioritizes consumes mime-type list by moving json-vendor and json mime-types up front, but 
-     *  otherwise preserves original consumes definition order. 
-     *  [application/vnd...+json,... application/json, ..as is..]  
-     *  
+     * Prioritizes consumes mime-type list by moving json-vendor and json mime-types up front, but
+     * otherwise preserves original consumes definition order.
+     * [application/vnd...+json,... application/json, ..as is..]
+     *
      * @param consumes consumes mime-type list
-     * @return 
+     * @return
      */
     static List<Map<String, String>> prioritizeContentTypes(List<Map<String, String>> consumes) {
-        if ( consumes.size() <= 1 )
+        if (consumes.size() <= 1)
             return consumes;
-        
+
         List<Map<String, String>> prioritizedContentTypes = new ArrayList<>(consumes.size());
-        
+
         List<Map<String, String>> jsonVendorMimeTypes = new ArrayList<>(consumes.size());
         List<Map<String, String>> jsonMimeTypes = new ArrayList<>(consumes.size());
-        
-        for ( Map<String, String> consume : consumes) {
-            if ( isJsonVendorMimeType(consume.get(MEDIA_TYPE))) {
+
+        for (Map<String, String> consume : consumes) {
+            if (isJsonVendorMimeType(consume.get(MEDIA_TYPE))) {
                 jsonVendorMimeTypes.add(consume);
-            }
-            else if ( isJsonMimeType(consume.get(MEDIA_TYPE))) {
+            } else if (isJsonMimeType(consume.get(MEDIA_TYPE))) {
                 jsonMimeTypes.add(consume);
-            }
-            else
+            } else
                 prioritizedContentTypes.add(consume);
-            
+
             consume.put("hasMore", "true");
         }
-        
+
         prioritizedContentTypes.addAll(0, jsonMimeTypes);
         prioritizedContentTypes.addAll(0, jsonVendorMimeTypes);
-        
-        prioritizedContentTypes.get(prioritizedContentTypes.size()-1).put("hasMore", null);
-        
+
+        prioritizedContentTypes.get(prioritizedContentTypes.size() - 1).put("hasMore", null);
+
         return prioritizedContentTypes;
     }
-    
+
     private static boolean isMultipartType(List<Map<String, String>> consumes) {
         Map<String, String> firstType = consumes.get(0);
         if (firstType != null) {
@@ -357,18 +356,18 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     @Override
     public void postProcessModelProperty(CodegenModel model, CodegenProperty property) {
         super.postProcessModelProperty(model, property);
-        if(!BooleanUtils.toBoolean(model.isEnum)) {
+        if (!BooleanUtils.toBoolean(model.isEnum)) {
             //final String lib = getLibrary();
             //Needed imports for Jackson based libraries
-            if(additionalProperties.containsKey("jackson")) {
+            if (additionalProperties.containsKey("jackson")) {
                 model.imports.add("JsonProperty");
             }
-            if(additionalProperties.containsKey("gson")) {
+            if (additionalProperties.containsKey("gson")) {
 //                model.imports.add("SerializedName");
             }
         } else { // enum class
             //Needed imports for Jackson's JsonCreator
-            if(additionalProperties.containsKey("jackson")) {
+            if (additionalProperties.containsKey("jackson")) {
                 model.imports.add("JsonCreator");
             }
         }
@@ -379,7 +378,7 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         objs = super.postProcessModelsEnum(objs);
         //Needed import for Gson based libraries
         if (additionalProperties.containsKey("gson")) {
-            List<Map<String, String>> imports = (List<Map<String, String>>)objs.get("imports");
+            List<Map<String, String>> imports = (List<Map<String, String>>) objs.get("imports");
             List<Object> models = (List<Object>) objs.get("models");
             for (Object _mo : models) {
                 Map<String, Object> mo = (Map<String, Object>) _mo;
@@ -414,7 +413,6 @@ public class JavaClientCodegen extends AbstractJavaCodegen
         this.usePlay24WS = usePlay24WS;
     }
 
-
     public void setParcelableModel(boolean parcelableModel) {
         this.parcelableModel = parcelableModel;
     }
@@ -440,24 +438,24 @@ public class JavaClientCodegen extends AbstractJavaCodegen
     }
 
     final private static Pattern JSON_MIME_PATTERN = Pattern.compile("(?i)application\\/json(;.*)?");
-    final private static Pattern JSON_VENDOR_MIME_PATTERN = Pattern.compile("(?i)application\\/vnd.(.*)+json(;.*)?"); 
+    final private static Pattern JSON_VENDOR_MIME_PATTERN = Pattern.compile("(?i)application\\/vnd.(.*)+json(;.*)?");
 
     /**
      * Check if the given MIME is a JSON MIME.
      * JSON MIME examples:
-     *   application/json
-     *   application/json; charset=UTF8
-     *   APPLICATION/JSON
+     * application/json
+     * application/json; charset=UTF8
+     * APPLICATION/JSON
      */
     static boolean isJsonMimeType(String mime) {
-        return mime != null && ( JSON_MIME_PATTERN.matcher(mime).matches());
+        return mime != null && (JSON_MIME_PATTERN.matcher(mime).matches());
     }
 
     /**
      * Check if the given MIME is a JSON Vendor MIME.
      * JSON MIME examples:
-     *   application/vnd.mycompany+json
-     *   application/vnd.mycompany.resourceA.version1+json
+     * application/vnd.mycompany+json
+     * application/vnd.mycompany.resourceA.version1+json
      */
     static boolean isJsonVendorMimeType(String mime) {
         return mime != null && JSON_VENDOR_MIME_PATTERN.matcher(mime).matches();

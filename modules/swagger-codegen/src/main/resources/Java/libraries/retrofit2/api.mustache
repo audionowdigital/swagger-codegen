@@ -1,6 +1,7 @@
 package {{package}};
 
 {{#useRxJava}}import rx.Observable;{{/useRxJava}}
+{{#useRxJava2}}import io.reactivex.Completable;{{/useRxJava2}}
 {{#useRxJava2}}import io.reactivex.Observable;{{/useRxJava2}}
 {{#doNotUseRx}}import retrofit2.Call;{{/doNotUseRx}}
 import retrofit2.http.*;
@@ -31,7 +32,7 @@ public interface {{classname}} {
 {{#allParams}}
    * @param {{paramName}} {{description}}{{#required}} (required){{/required}}{{^required}} (optional{{#defaultValue}}, default to {{{.}}}{{/defaultValue}}){{/required}}
 {{/allParams}}
-   * @return Call&lt;{{#returnType}}{{returnType}}{{/returnType}}{{^returnType}}Object{{/returnType}}&gt;
+   * @return {{#useCompletable}}Call&lt;{{#returnType}}{{returnType}}{{/returnType}}{{^returnType}}Object{{/returnType}}&gt{{/useCompletable}}{{^useCompletable}}Completable{{/useCompletable}};
    */
   {{#formParams}}
   {{#-first}}
@@ -48,10 +49,9 @@ public interface {{classname}} {
   {{/prioritizedContentTypes}}
   {{/formParams}}  
   @{{httpMethod}}("{{{path}}}")
-  {{^usePlay24WS}}{{^doNotUseRx}}Observable{{/doNotUseRx}}{{#doNotUseRx}}Call{{/doNotUseRx}}{{/usePlay24WS}}{{#usePlay24WS}}F.Promise<Response{{/usePlay24WS}}<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Object{{/returnType}}>{{#usePlay24WS}}>{{/usePlay24WS}} {{operationId}}({{^allParams}});{{/allParams}}
+  {{#useCompletable}}{{^usePlay24WS}}{{^doNotUseRx}}Observable{{/doNotUseRx}}{{#doNotUseRx}}Call{{/doNotUseRx}}{{/usePlay24WS}}{{#usePlay24WS}}F.Promise<Response{{/usePlay24WS}}<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Object{{/returnType}}>{{#usePlay24WS}}>{{/usePlay24WS}}{{/useCompletable}}{{^useCompletable}}Completable{{/useCompletable}} {{operationId}}({{^allParams}});{{/allParams}}
     {{#allParams}}{{>libraries/retrofit2/queryParams}}{{>libraries/retrofit2/pathParams}}{{>libraries/retrofit2/headerParams}}{{>libraries/retrofit2/bodyParams}}{{>libraries/retrofit2/formParams}}{{#hasMore}}, {{/hasMore}}{{^hasMore}}
   );{{/hasMore}}{{/allParams}}
-
   {{/operation}}
 }
 {{/operations}}
