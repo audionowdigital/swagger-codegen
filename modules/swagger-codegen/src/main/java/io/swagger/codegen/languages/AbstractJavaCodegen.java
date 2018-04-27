@@ -733,6 +733,18 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
 
     @Override
     public CodegenModel fromModel(String name, Model model, Map<String, Model> allDefinitions) {
+//       if backReference set on true, find the properties Object/List of Objects type and add them to the specific object->to assign them JsonBackReference
+
+        if (additionalProperties.containsKey("backReference")) {
+            if(Boolean.valueOf(additionalProperties.get("backReference").toString())) {
+                if (alreadyExecuted) {
+                    if (allDefinitions != null)
+                        setBackRefProperties(allDefinitions);
+                    alreadyExecuted = false;
+                }
+            }
+        }
+
         CodegenModel codegenModel = super.fromModel(name, model, allDefinitions);
         if(codegenModel.description != null) {
             codegenModel.imports.add("ApiModel");
@@ -742,18 +754,10 @@ public abstract class AbstractJavaCodegen extends DefaultCodegen implements Code
             codegenModel.imports.add("JsonSubTypes");
             codegenModel.imports.add("JsonTypeInfo");
         }
-
-//       if backReference set on true, find the properties Object/List of Objects type and add them to the specific object->to assign them JsonBackReference
-
         if (additionalProperties.containsKey("backReference")) {
             if(Boolean.valueOf(additionalProperties.get("backReference").toString())) {
                 codegenModel.imports.add("JsonValue");
                 codegenModel.imports.add("JsonProperty");
-                if (alreadyExecuted) {
-                    if (allDefinitions != null)
-                        setBackRefProperties(allDefinitions);
-                    alreadyExecuted = false;
-                }
             }
         }
 
